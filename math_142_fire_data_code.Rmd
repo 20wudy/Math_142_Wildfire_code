@@ -1,0 +1,130 @@
+---
+title: "MATH 142"
+author: "AJ Fong 006513485"
+date: "2025-12-07"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(sf)
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+
+fire_frequency <- read.csv("Australia Wildfire Frequency - Sheet2.csv")
+fire_data <- read.csv("fire_data_raw.csv")
+```
+
+
+```{r}
+fire_data_transform <- fire_data
+
+victoria_data <- fire_data_transform[fire_data_transform$state == "VIC (Victoria)",]
+victoria_data <- victoria_data[victoria_data$area_ha >= 30,]
+victoria_data <- victoria_data[, -c(1,2,7,8,11,12)]
+
+fire_data_transform$ignition_date <- as.Date(
+  substr(fire_data_transform$ignition_date, 1, 10)
+)
+fire_data_transform$extinguish_date <- as.Date(
+  substr(fire_data_transform$extinguish_date, 1, 10)
+)
+
+victoria_small <- victoria_data[victoria_data$area_ha > 2000 & victoria_data$area_ha < 10000,]
+victoria_large <- victoria_data[victoria_data$area_ha >= 10000,]
+
+victoria_small$Date <- as.numeric(format(as.Date(victoria_small$ignition_date), "%Y"))
+
+victoria_large$Date <- as.numeric(format(as.Date(victoria_large$ignition_date), "%Y"))
+
+victoria_large_tidy <- victoria_large %>%
+  group_by(Date = Date) %>%
+  summarise(avg = length(area_ha))
+
+victoria_small_tidy <- victoria_small %>%
+  group_by(Date = Date) %>%
+  summarise(avg = length(area_ha))
+
+
+
+victoria_large_tresh <- victoria_large_tidy[41:53,]
+victoria_small_tresh <- victoria_small_tidy[55:75,]
+
+ggplot(victoria_large_tresh, aes(x = Date, y = avg)) +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", fill = "blue",
+    color = "blue",
+    alpha = 0.1,
+    se = TRUE) +
+  labs(
+    x = "Year",
+    y = "Large Fires",
+    title = "Large Fires per Year in Victoria (> 10,000ha)"
+  ) +
+    theme(
+    plot.title = element_text(size = 24, face = "bold"),
+    axis.title.x = element_text(size = 20, face = "bold"),
+    axis.title.y = element_text(size = 20, face = "bold"),
+    axis.text = element_text(size = 12)
+  )
+
+ggplot(victoria_small_tresh, aes(x = Date, y = avg)) +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", fill = "blue",
+    color = "blue",
+    alpha = 0.1,
+    se = TRUE) +
+  labs(
+    x = "Year",
+    y = "Small Fires",
+    title = "Small Fires per Year in Victoria (2,000–10,000ha)"
+  ) +
+  theme(
+    plot.title = element_text(size = 24, face = "bold"),
+    axis.title.x = element_text(size = 20, face = "bold"),
+    axis.title.y = element_text(size = 20, face = "bold"),
+    axis.text = element_text(size = 12)
+  )
+
+ggplot(fire_frequency, aes(x = Year, y = Extreme.Fires)) +
+  geom_point(size = 2) +
+  
+  # Linear regression with 95% CI
+  geom_smooth(
+    method = "lm",
+    formula = y ~ x,
+    fill = "blue",
+    color = "blue",
+    alpha = 0.2,
+    se = TRUE
+  ) +
+  
+  # Quadratic regression with 95% CI
+  geom_smooth(
+    method = "lm",
+    formula = y ~ poly(x, 2),
+    fill = "red",
+    color = "red",
+    alpha = 0.2,
+    se = TRUE
+  ) +
+  
+  labs(
+    x = "Year",
+    y = "Extreme Fires",
+    title = "Extreme Fires per Year in Victoria"
+  ) +
+  
+  theme(
+    plot.title = element_text(size = 24, face = "bold"),
+    axis.title.x = element_text(size = 20, face = "bold"),
+    axis.title.y = element_text(size = 20, face = "bold"),
+    axis.text = element_text(size = 12)
+  )
+
+```
+
